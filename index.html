@@ -1,0 +1,344 @@
+Javascript
+Note: // Demo account data (starting balance and portfolio)
+let demoAccount = {
+    balance: 10000, // Initial balance in USD
+    spot: { cash: 10000, coins: 0 },
+    futures: { cash: 10000, positions: [] },
+};
+
+// Store the active interval ID so we can clear it later if needed
+let tradingInterval;
+
+// Log function
+const logOutput = (message, elementId) => {
+    const element = document.getElementById(elementId);
+    element.innerHTML += `<p>${message}</p>`;
+};
+
+// Update the portfolio display
+const updatePortfolio = () => {
+    const output = document.getElementById("portfolio-output");
+    output.innerHTML = `
+        <h3>Spot Portfolio</h3>
+        <p>Cash: $${demoAccount.spot.cash.toFixed(2)}</p>
+        <p>Coins: ${demoAccount.spot.coins.toFixed(4)}</p>
+        <h3>Futures Portfolio</h3>
+        <p>Cash: $${demoAccount.futures.cash.toFixed(2)}</p>
+        <p>Positions: ${demoAccount.futures.positions.length}</p>
+    `;
+};
+
+// Handle mode-specific settings
+document.getElementById("mode").addEventListener("change", (e) => {
+    const futuresSettings = document.getElementById("futures-settings");
+    if (e.target.value === "futures") {
+        futuresSettings.style.display = "block";
+    } else {
+        futuresSettings.style.display = "none";
+    }
+});
+
+// Handle form submission for trading
+document.getElementById("trading-form").addEventListener("submit", function (e) {
+    e.preventDefault();
+
+    const pair = document.getElementById("pair").value;
+    const buyThreshold = parseFloat(document.getElementById("buy-threshold").value);
+    const sellThreshold = parseFloat(document.getElementById("sell-threshold").value);
+    const mode = document.getElementById("mode").value;
+    const leverage = parseInt(document.getElementById("leverage").value || 1, 10);
+    const interval = parseInt(document.getElementById("interval").value);
+
+    logOutput(`Trading bot started for ${pair} in ${mode} mode`, "log-output");
+
+    if (tradingInterval) {
+        clearInterval(tradingInterval); // Clear any previous intervals
+    }
+
+    // Set interval for trading actions
+    tradingInterval = setInterval(() => {
+        if (mode === "spot") {
+            spotTrading(buyThreshold, sellThreshold);
+        } else {
+            futuresTrading(buyThreshold, sellThreshold, leverage);
+        }
+        updatePortfolio();
+    }, interval);
+});
+
+// Spot Trading Simulation
+const spotTrading = (buyThreshold, sellThreshold) => {
+    logOutput("Executing Spot Trading Strategy...", "log-output");
+
+    // Buying process (if the user has enough cash)
+    if (demoAccount.spot.cash >= buyThreshold) {
+        demoAccount.spot.coins += 1;
+        demoAccount.spot.cash -= buyThreshold;
+        logOutput(`Bought 1 coin at $${buyThreshold}`, "log-output");
+    }
+    // Selling process (if the user has coins to sell)
+    else if (demoAccount.spot.coins > 0 && sellThreshold >= buyThreshold) {
+        demoAccount.spot.coins -= 1;
+        demoAccount.spot.cash += sellThreshold;
+        logOutput(`Sold 1 coin at $${sellThreshold}`, "log-output");
+    }
+};
+
+// Futures Trading Simulation
+const futuresTrading = (buyThreshold, sellThreshold, leverage) => {
+    logOutput("Executing Futures Trading Strategy...", "log-output");
+
+    const margin = buyThreshold / leverage;
+
+    // Opening a position (if the user has enough margin)
+    if (demoAccount.futures.cash >= margin) {
+        demoAccount.futures.positions.push({
+            entryPrice: buyThreshold,
+            leverage,
+        });
+        demoAccount.futures.cash -= margin;
+        logOutput(`Opened a long position at $${buyThreshold} with ${leverage}x leverage`, "log-output");
+    }
+    // Closing a position (if the user has an open position)
+    else if (demoAccount.futures.positions.length > 0) {
+        const position = demoAccount.futures.positions.pop();
+        const profit = (sellThreshold - position.entryPrice) * leverage;
+        demoAccount.futures.cash += margin + profit;
+        logOutput(`Closed position at $${sellThreshold}, Profit: $${profit.toFixed(2)}`, "log-output");
+    }
+};
+
+// Initialize the portfolio display
+updatePortfolio(); 
+Html
+Note: <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crypto Trading Bot - Demo Account</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Crypto Trading Bot - Demo Account</h1>
+            <p class="subheading">Simulate Spot and Futures Trading</p>
+        </header>
+
+        <main>
+            <section class="trading-settings">
+                <h2>Trading Settings</h2>
+                <form id="trading-form">
+                    <div class="input-group">
+                        <label for="pair">Trading Pair</label>
+                        <input type="text" id="pair" placeholder="e.g., BTC/USDT" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="buy-threshold">Buy Threshold ($)</label>
+                        <input type="number" id="buy-threshold" placeholder="e.g., 40000" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="sell-threshold">Sell Threshold ($)</label>
+                        <input type="number" id="sell-threshold" placeholder="e.g., 45000" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="mode">Trading Mode</label>
+                        <select id="mode">
+                            <option value="spot">Spot Trading</option>
+                            <option value="futures">Futures Trading</option>
+                        </select>
+                    </div>
+                    <div id="futures-settings" class="input-group" style="display: none;">
+                        <label for="leverage">Leverage</label>
+                        <input type="number" id="leverage" placeholder="e.g., 10" min="1" max="100">
+                    </div>
+                    <div class="input-group">
+                        <label for="interval">Trading Interval</label>
+                        <select id="interval">
+                            <option value="5000">Every 5 seconds</option>
+                            <option value="60000">Every 1 minute</option>
+                            <option value="120000">Every 2 minutes</option>
+                            <option value="180000">Every 3 minutes</option>
+                            <option value="300000">Every 5 minutes</option>
+                            <option value="600000">Every 10 minutes</option>
+                            <option value="1800000">Every 30 minutes</option>
+                            <option value="3600000">Every 1 hour</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn">Start Bot</button>
+                </form>
+            </section>
+
+            <section class="portfolio">
+                <h2>Demo Account Portfolio</h2>
+                <div id="portfolio-output"></div>
+            </section>
+
+            <section class="logs">
+                <h2>Logs</h2>
+                <div id="log-output"></div>
+            </section>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html> 
+Css
+Note: * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Poppins', sans-serif;
+    background: #f4f7fc;
+    color: #333;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+.container {
+    width: 90%;
+    max-width: 900px;
+    background: #fff;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+header h1 {
+    font-size: 2.5rem;
+    font-weight: 600;
+    color: #333;
+}
+
+header .subheading {
+    font-size: 1rem;
+    font-weight: 400;
+    color: #777;
+}
+
+main {
+    margin-top: 20px;
+}
+
+section {
+    margin-bottom: 30px;
+}
+
+h2 {
+    font-size: 1.6rem;
+    font-weight: 600;
+    margin-bottom: 15px;
+    color: #222;
+}
+
+.input-group {
+    margin-bottom: 20px;
+}
+
+label {
+    font-weight: 600;
+    font-size: 1rem;
+    color: #555;
+    margin-bottom: 5px;
+    display: block;
+}
+
+input, select {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 1rem;
+    background-color: #f9f9f9;
+    color: #333;
+    transition: border-color 0.3s ease;
+}
+
+input:focus, select:focus {
+    border-color: #007bff;
+    outline: none;
+}
+
+button.btn {
+    width: 100%;
+    padding: 14px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-size: 1.2rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+button.btn:hover {
+    background-color: #0056b3;
+}
+
+button.btn:active {
+    background-color: #004085;
+}
+
+#portfolio-output, #log-output {
+    background-color: #f9f9f9;
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.05);
+    height: 200px;
+    overflow-y: auto;
+}
+
+.logs p, .portfolio p {
+    margin-bottom: 8px;
+    color: #555;
+}
+
+.logs h3, .portfolio h3 {
+    font-size: 1.2rem;
+    margin-top: 15px;
+    color: #333;
+}
+
+input[type="number"] {
+    -moz-appearance: textfield;
+}
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+/* Media Queries for Responsiveness */
+@media (max-width: 768px) {
+    .container {
+        padding: 15px;
+    }
+
+    header h1 {
+        font-size: 2rem;
+    }
+
+    header .subheading {
+        font-size: 0.9rem;
+    }
+
+    button.btn {
+        font-size: 1rem;
+    }
+} 
